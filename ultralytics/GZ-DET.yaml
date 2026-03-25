@@ -1,6 +1,6 @@
 # GZ-DET
-train: 		/train  # train images (relative to 'path') 128 images
-val: 			/valid # val images (relative to 'path') 128 images
+train: /root/autodl-fs/GYU-DET/train  # train images (relative to 'path') 128 images
+val: /root/autodl-fs/GYU-DET/valid # val images (relative to 'path') 128 images
 # Classes
 names:
   0: Crack
