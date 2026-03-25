@@ -1,0 +1,5 @@
+/.codex
+*.pyc
+*.pt
+__pycache__/
+/.vscode
