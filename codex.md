@@ -583,3 +583,62 @@
 - 当前建议结论:
   - 如果你现在的目标是“尽快把检测精度提上去”，优先级应放在 `预训练权重 + 数据/标注质量 + 输入分辨率 + YOLO baseline 调参/换模型规模`。
   - 如果你后面已经把 YOLO baseline 做到比较强，且仍希望进一步冲高 AP，再考虑补做一组 `RT-DETR vs YOLO` 对比，会更稳妥。
+
+### 阶段 7
+
+- 已围绕“在 `RTX4090` 上满足 `4K 单张图像推理 <= 200ms` 这一硬约束时，`RT-DETR` 与更大的 `YOLO`（如 `YOLO26l`）哪个收益更高”完成一次工程取向判断。
+- 当前结论:
+  - `优先选更大的 YOLO，尤其是 YOLO26m / YOLO26l 这一档`
+  - `不建议把 RT-DETR 作为满足 4K/200ms 目标的首选方案`
+- 结论依据分为 3 层:
+  - 官方对比资料里，`YOLO26 / YOLO11` 在速度-精度折中上就是主推荐路线；Quick Decision Guide 对 `Cloud / GPU` + `Max Accuracy` 的推荐也是 `YOLO26x / YOLO26l`，而不是 `RT-DETR`。
+  - 官方 640 基准下，`YOLO26l` 的 `T4 TensorRT10` 推理速度约为 `6.2ms`，`YOLO26m` 约为 `4.7ms`；而 `RTDETRv2-l` 约为 `9.76ms`。在精度上，`YOLO26l` 也高于 `RTDETRv2-l`。
+  - 若按像素数从 `640x640` 粗略放大到 `3840x2160`（约 `20.25x` 像素）做一阶估算，则 `YOLO26m / YOLO26l` 仍更有希望留出时延余量，而 `RTDETRv2-l` 更接近 200ms 红线，工程风险更高。
+- 当前更具体的判断是:
+  - 如果你最看重的是 `卡 200ms 时延线并尽量提高精度`，优先级应是 `YOLO26m -> YOLO26l`，而不是先试 `RT-DETR`。
+  - 如果你最看重的是 `研究型对比` 或 `Transformer 检测器在复杂背景上的潜在上限`，可以在 YOLO 强 baseline 稳定后，再补一组 `RTDETRv2-l` 对比实验。
+  - 若进一步放大到 `x` 级模型，则虽然 AP 可能继续上涨，但在 4K 下越容易逼近或超过时延预算，因此不一定比 `l` 档更划算。
+- 与当前仓库直接相关的现实限制:
+  - 当前本地仓库 `ultralytics` 版本为 `8.3.126`，未发现 `YOLO26` 相关实现。
+  - 当前仓库中 `RT-DETR` 也存在包结构不完整问题，直接切换并不省事。
+  - 因此若要在本项目里实际落地 `YOLO26l`，大概率需要先升级或更换 `ultralytics` 代码基线；若不升级，则当前更现实的是在现有仓库内优先做 `YOLO11m / YOLO11l` 的高分辨率部署验证。
+
+### 阶段 8
+
+- 已按“先将训练流程修改为 `yolo26m`”完成静态代码改造。
+- 本次代码改动包括:
+  - 将训练入口 `ultralytics/mytrain.py` 的默认模型改为 `yolo26m.pt`
+  - 补充命令行参数 `--model / --data / --epochs`
+  - 将数据集配置路径改为基于脚本位置解析，避免相对路径依赖当前工作目录
+  - 显式要求使用外部 pip 安装的新版 `ultralytics`，避免继续误用仓库里这份仅含旧 `YOLO11` 基线的本地代码
+  - 同步修正文档 `README.md` 中关于数据配置文件名和训练入口说明
+- 本次仅执行静态校验，未做依赖安装:
+  - `python -m py_compile ultralytics/mytrain.py` 通过
+  - `python ultralytics/mytrain.py --help` 通过
+- 当前已知限制:
+  - 由于当前环境未安装支持 `YOLO26` 的外部 `ultralytics` 包，训练脚本暂未做运行时训练验证
+  - 因此本阶段结论是 `静态改造已完成`，`运行时验证待后续具备依赖环境后继续`
+
+### 阶段 9
+
+- 已将仓库原有 `ultralytics/` fork 替换为官方 `Ultralytics 8.4.2` 的本地代码基线，以便后续直接在 `YOLO26` 主干上继续修改。
+- 本次替换采取了“先备份、再替换”的方式，而不是直接覆盖:
+  - 原目录已备份到 `_backup_ultralytics_v83126/`
+  - 官方源码已拉取到 `_vendor_ultralytics_v842/`
+  - 当前生效目录为新的 `ultralytics/`
+- 已确认新的本地代码基线具备 `YOLO26` 相关实现:
+  - `ultralytics/__init__.py` 版本为 `8.4.2`
+  - `ultralytics/cfg/models/26/` 已包含 `yolo26.yaml`、`yolo26-p2.yaml`、`yolo26-p6.yaml`、`yolo26-seg.yaml` 等配置
+- 已将项目自定义文件接回新基线:
+  - `ultralytics/GZ-DET.yaml`
+  - `ultralytics/mytrain.py`
+- 当前 `mytrain.py` 已调整为:
+  - 默认使用 `yolo26m.pt`
+  - 支持 `--model / --data / --epochs`
+  - 通过在运行时补充项目根路径，避免 `python ultralytics/mytrain.py` 的导入问题
+- 本阶段完成的静态校验:
+  - `python -m py_compile ultralytics/mytrain.py` 通过
+  - `python ultralytics/mytrain.py --help` 通过
+- 当前剩余的运行时前置条件:
+  - 直接导入新 `ultralytics` 时，当前环境缺少 `opencv-python`（`cv2`）等运行依赖
+  - 因此本阶段可以确认 `YOLO26` 代码基线替换已完成，但完整训练运行仍需后续补齐依赖环境

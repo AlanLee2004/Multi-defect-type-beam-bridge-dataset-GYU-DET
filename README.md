@@ -1,10 +1,10 @@
-# Multi-defect-type-beam-bridge-dataset-GYU-DET
+﻿# Multi-defect-type-beam-bridge-dataset-GYU-DET
 
 This repository provides training code and label conversion tools for the [GYU-DET dataset](https://doi.org/10.57760/sciencedb.19893), a multi-defect-type beam bridge image dataset designed for object detection tasks.
 
 ## Repository Structure
 
-- `ultralytics/`: Contains YOLOv11 training and configuration code.
+- `ultralytics/`: Contains the repository-local Ultralytics YOLO26 training and configuration code.
 - `txt2coco.py`: Converts YOLO-format labels into COCO-style `.json` annotations.
 - `txt2xml.py`: Converts YOLO-format labels into VOC-style `.xml` annotations.
 
@@ -23,13 +23,15 @@ Download the GYU-DET dataset from:
 https://doi.org/10.57760/sciencedb.19893
 
 ## Quick Start
-After downloading the dataset, edit the ultralytics/GYU-DET.yaml file to point to the correct paths for train, val, and test datasets.
+After downloading the dataset, edit the `ultralytics/GZ-DET.yaml` file to point to the correct paths for train and val datasets.
 
 Run the training script:
 
 ```
 python ultralytics/mytrain.py
 ```
+
+The repository-local `ultralytics/` codebase is now based on official YOLO26, and the default training entry targets `YOLO26m` pretrained weights.
 
 ## Dependencies
 
@@ -43,7 +45,7 @@ CUDA == 12.1
 
 torchvision == 0.18.1
 
-ultralytics == 8.3.33
+Bundled local Ultralytics codebase: 8.4.2
 
 numpy == 1.26.3
 
@@ -55,4 +57,3 @@ scipy == 1.13.1
 
 tqdm == 4.65.2
 
-ultralytics == 8.0.227
